@@ -11,6 +11,11 @@
 - [x] J: Opgeslagen kaartontwerpen
 
 ## Open (uit specificaties)
+- [ ] Mission Control: actieve leden, badges en actiepunten op /admin
+- [ ] Financieel beheer: IBAN-overzicht en exacte naamsignalering op /admin/finance
+- [ ] Infrastructuur: webhooklogboek, subdomeinen en aliassen op /admin/infra
+- [ ] Nieuwe beheermodules: autorisatie, tests en ingelogde eindcontrole
+- [ ] Publieke Q&A en thema's (geparkeerd op verzoek; geen implementatie)
 - [x] Badges: wapenschilden (db/86), uploader/bewerken in /admin/custom-badges, interactieve pop-up op profiel
 - [ ] Snapchat Login Kit + Bitmoji-picker + handmatige status/mood-widget (geen Snap Map/GPS) (wacht op Snap Kit client ID/secret)
 - [x] Admin-portaal split (APP_MODE, rout.dlp.li, noindex) + harde build-split
