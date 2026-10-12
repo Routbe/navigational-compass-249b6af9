@@ -33,6 +33,7 @@ export function BadgeClaimLinks({ badgeId }: { badgeId: string }) {
   async function create() {
     const maxClaims = max.trim() ? Number(max) : null;
     const expiresAt = expires ? new Date(`${expires}T23:59:59`).toISOString() : null;
+    if (maxClaims != null && (!Number.isInteger(maxClaims) || maxClaims < 1 || maxClaims > 100_000)) return notifyError("Kies tussen 1 en 100.000 claims.");
     if (maxClaims == null && !expiresAt) return notifyError("Stel een maximum aantal claims of een vervaldatum in.");
     setBusy(true);
     try {
@@ -55,7 +56,7 @@ export function BadgeClaimLinks({ badgeId }: { badgeId: string }) {
       <div className="grid gap-2 sm:grid-cols-3">
         <div>
           <Label htmlFor="cl-max">Max. claims</Label>
-          <Input id="cl-max" type="number" min={1} value={max} onChange={(e) => setMax(e.target.value)} placeholder="Onbeperkt" />
+          <Input id="cl-max" type="number" min={1} max={100000} value={max} onChange={(e) => setMax(e.target.value)} placeholder="Onbeperkt" />
         </div>
         <div>
           <Label htmlFor="cl-exp">Vervalt op</Label>
@@ -67,15 +68,15 @@ export function BadgeClaimLinks({ badgeId }: { badgeId: string }) {
         </div>
       </div>
       <Button onClick={() => void create()} disabled={busy}>
-        <Link2 className="mr-1.5 h-4 w-4" aria-hidden /> Claim-link genereren
+        <Link2 className="mr-1.5 h-4 w-4" aria-hidden /> Genereer Claim Link
       </Button>
 
       {shown && (
-        <div className="flex items-center gap-4 rounded-2xl border border-border p-4">
+        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-4">
           <div className="rounded-lg bg-background p-2 text-foreground">
             <QRCodeSVG value={url(shown)} size={120} level="M" marginSize={0} bgColor="transparent" fgColor="currentColor" aria-label="QR van de claim-link" />
           </div>
-          <code className="break-all text-xs">{url(shown)}</code>
+          <code className="min-w-0 flex-1 break-all text-xs">{url(shown)}</code>
         </div>
       )}
 
@@ -84,9 +85,9 @@ export function BadgeClaimLinks({ badgeId }: { badgeId: string }) {
           {links.map((l) => (
             <li key={l.id} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
               <span className="min-w-0">
-                <button type="button" className="font-mono text-xs underline-offset-4 hover:underline" onClick={() => setShown(l.token)}>
+                <Button variant="link" className="h-auto max-w-full whitespace-normal break-all p-0 text-left font-mono text-xs" onClick={() => setShown(l.token)}>
                   {l.token}
-                </button>
+                </Button>
                 <span className="block text-xs text-muted-foreground">
                   {l.claims}/{l.maxClaims ?? "∞"} geclaimd
                   {l.expiresAt && ` · tot ${new Date(l.expiresAt).toLocaleDateString("nl-BE")}`}
