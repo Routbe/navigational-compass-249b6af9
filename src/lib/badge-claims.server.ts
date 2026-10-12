@@ -2,6 +2,7 @@
 import { sql } from "@/lib/neon";
 import { writeAudit } from "./admin.server";
 import { runSchemaEnsure } from "@/lib/db/schema-ensure.server";
+import { claimState } from "./stamp-rules";
 
 /** Safety net for db/92 when migrations have not run yet. */
 let ready: Promise<void> | null = null;
@@ -26,8 +27,8 @@ type Row = Record<string, unknown>;
 const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
 
 function newToken() {
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
-  return "stamp_" + Array.from(bytes, (b) => (b % 36).toString(36)).join("");
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return "stamp_" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function createClaimLink(adminId: string, input: { badgeId: string; maxClaims: number | null; expiresAt: string | null; reason: string | null }) {
@@ -71,13 +72,8 @@ export async function previewClaim(token: string) {
     from public.badge_claim_links l join public.custom_badges b on b.id = l.badge_id
     where l.token = ${token} limit 1`) as Row[])[0];
   if (!r) return null;
-  const state: ClaimResult | "open" = r["revoked_at"]
-    ? "invalid"
-    : r["expires_at"] && new Date(r["expires_at"] as string) < new Date()
-      ? "expired"
-      : r["max_claims"] != null && Number(r["claims_count"]) >= Number(r["max_claims"])
-        ? "exhausted"
-        : "open";
+  const state = claimState({ revoked: r["revoked_at"] != null, expiresAt: iso(r["expires_at"]),
+    maxClaims: r["max_claims"] == null ? null : Number(r["max_claims"]), claims: Number(r["claims_count"]) });
   return {
     state,
     badge: {
@@ -92,34 +88,36 @@ export async function previewClaim(token: string) {
   };
 }
 
-/** Atomic redeem: one statement locks the link, records the redemption, bumps the count and grants the badge. */
+/** Lock first, then take a fresh READ COMMITTED snapshot in the same gateway transaction. */
 export async function redeemClaim(token: string, userId: string): Promise<ClaimResult> {
-  const pre = await previewClaim(token);
-  if (!pre) return "invalid";
-  const owned = (await sql`select 1 from public.user_custom_badges u join public.badge_claim_links l on l.badge_id = u.badge_id
-    where l.token = ${token} and u.user_id = ${userId} limit 1`) as Row[];
-  if (owned.length) return "already";
-  if (pre.state !== "open") return pre.state;
-  const rows = (await sql`
+  await ensureTables();
+  const results = await sql.transaction([
+    sql`select id from public.badge_claim_links where token = ${token} for update`,
+    sql`
     with l as (
       select id, badge_id, reason from public.badge_claim_links
        where token = ${token} and revoked_at is null
          and (expires_at is null or expires_at > now())
          and (max_claims is null or claims_count < max_claims)
-       for update
-    ), r as (
-      insert into public.badge_claim_redemptions (link_id, user_id)
-      select id, ${userId} from l on conflict do nothing returning link_id
-    ), c as (
-      update public.badge_claim_links set claims_count = claims_count + 1 where id in (select link_id from r) returning id
+          and not exists (select 1 from public.badge_claim_redemptions r where r.link_id = badge_claim_links.id and r.user_id = ${userId})
     ), g as (
       insert into public.user_custom_badges (user_id, badge_id, granted_by, reason)
-      select ${userId}, l.badge_id, null, l.reason from l join r on r.link_id = l.id
+      select ${userId}, badge_id, null, reason from l
       on conflict (user_id, badge_id) do nothing returning badge_id
+    ), r as (
+      insert into public.badge_claim_redemptions (link_id, user_id)
+       select l.id, ${userId} from l join g on g.badge_id = l.badge_id
+       on conflict do nothing returning link_id
+    ), c as (
+      update public.badge_claim_links set claims_count = claims_count + 1 where id in (select link_id from r) returning id
     )
-    select (select count(*) from l)::int as valid, (select count(*) from r)::int as claimed
-  `) as Row[];
-  const row = rows[0] ?? {};
-  if (Number(row["claimed"]) > 0) return "claimed";
-  return Number(row["valid"]) > 0 ? "already" : "exhausted";
+    select case
+      when exists (select 1 from r) then 'claimed'
+      when exists (select 1 from public.user_custom_badges u join public.badge_claim_links b on b.badge_id = u.badge_id where b.token = ${token} and u.user_id = ${userId})
+        or exists (select 1 from l) then 'already'
+      when not exists (select 1 from public.badge_claim_links where token = ${token} and revoked_at is null) then 'invalid'
+      when exists (select 1 from public.badge_claim_links where token = ${token} and expires_at <= now()) then 'expired'
+      else 'exhausted' end as result
+  `]);
+  return (results[1]?.[0]?.["result"] ?? "invalid") as ClaimResult;
 }

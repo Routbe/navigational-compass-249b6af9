@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/middleware";
-
-const token = z.string().regex(/^stamp_[a-z0-9]{8,32}$/);
+import { claimLinkInput, stampToken as token } from "./stamp-rules";
 
 async function guard(userId: string) {
   const { assertAdminRole } = await import("./admin.server");
@@ -11,17 +10,7 @@ async function guard(userId: string) {
 
 export const adminCreateClaimLink = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d: unknown) =>
-    z
-      .object({
-        badgeId: z.string().uuid(),
-        maxClaims: z.number().int().min(1).max(100_000).nullable(),
-        expiresAt: z.string().datetime().nullable(),
-        reason: z.string().trim().max(200).nullable(),
-      })
-      .refine((v) => v.maxClaims != null || v.expiresAt != null, "Stel een maximum of vervaldatum in.")
-      .parse(d),
-  )
+  .inputValidator((d: unknown) => claimLinkInput.parse(d))
   .handler(async ({ data, context }) => {
     await guard(context.userId);
     const { createClaimLink } = await import("./badge-claims.server");

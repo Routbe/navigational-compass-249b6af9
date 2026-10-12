@@ -179,6 +179,7 @@ export async function publicBadgesForHandle(rawHandle: string) {
         join public.custom_badges b on b.id = u.badge_id
        where p.username = ${handle}
          and coalesce(p.is_banned, false) = false
+          and coalesce((p.display_prefs ->> 'publicProfile')::boolean, true)
        order by u.sort_order, u.granted_at
        limit 48
     `) as Row[];
