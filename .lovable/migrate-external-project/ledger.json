@@ -1,0 +1,14 @@
+{
+  "source": "github: Routbe/navigational-compass-a1626bcb (ROUT — QR & short-link platform)",
+  "capabilities": [
+    { "capability": "application code (108 routes, QR studio, profiles, admin)", "source": "repo", "outcome": "copied into project, build OK, home route verified in browser", "status": "verified", "next_action": null },
+    { "capability": "database schema (db/00–92 SQL migrations, Neon Postgres)", "source": "repo db/", "outcome": "migration files imported; app keeps external Neon database via DATABASE_URL", "status": "pending", "next_action": "user provides DATABASE_URL as a secret; run bun scripts/migrate.ts with MIGRATION_URL" },
+    { "capability": "existing records", "source": "Neon", "outcome": "no export attached", "status": "pending", "next_action": "request per-table CSV/JSON exports from Neon dashboard" },
+    { "capability": "auth (better-auth, passkeys, OAuth providers)", "source": "repo", "outcome": "code imported; needs BETTER_AUTH_SECRET, BETTER_AUTH_URL and provider keys", "status": "pending", "next_action": "collect secrets before verification" },
+    { "capability": "payments (Stripe, bunq, SEPA)", "source": "repo", "outcome": "code imported; provider keys missing", "status": "pending", "next_action": "request Stripe/bunq keys via secret form" },
+    { "capability": "email (Brevo)", "source": "repo", "outcome": "code imported; BREVO_API_KEY missing", "status": "pending", "next_action": "request Brevo key via secret form" },
+    { "capability": "file storage (Scaleway S3)", "source": "repo", "outcome": "code imported; Scaleway keys missing", "status": "pending", "next_action": "request Scaleway keys via secret form" },
+    { "capability": "cron endpoints (/api/public/cron/*)", "source": "repo", "outcome": "code imported; needs LOVABLE_CRON_SECRET", "status": "pending", "next_action": "set cron secret and configure external scheduler" },
+    { "capability": "Telegram bot webhook", "source": "repo", "outcome": "code imported; TELEGRAM_BOT_TOKEN missing", "status": "pending", "next_action": "request token via secret form" }
+  ]
+}
