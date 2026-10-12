@@ -18,7 +18,7 @@
 - [x] Sovereign Tip Jar (☕-knop + EPC-QR op profiel)
 - [ ] Testsuite account-merge / security-code / sms-provider / telegram
 - [x] Badge-uploads via Scaleway S3 (S3_* env vars) i.p.v. Vercel Blob
-- [x] Digitaal paspoort (stempels op profiel)
-- [x] Claim-a-Stamp links (admin) + /claim/<token>
+- [ ] Digitaal paspoort: grid en interactieve details afwerken
+- [ ] Claim-a-Stamp: login-terugkeer, succesanimatie en veilige limieten testen
 - [x] Publieke/admin shells + preview-schakelaar
 - [ ] db/92 toepassen in Neon (wacht op NEON_API_KEY in de omgeving)
