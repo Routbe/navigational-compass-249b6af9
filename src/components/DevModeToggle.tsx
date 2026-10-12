@@ -22,7 +22,8 @@ export function DevModeToggle() {
   };
 
   return (
-    <div role="group" aria-label="Weergave wisselen" className="fixed bottom-3 left-1/2 z-[100] flex -translate-x-1/2 gap-1 rounded-full border border-border bg-background/90 p-1 text-xs shadow-lg backdrop-blur">
+    <div role="group" aria-label="Weergave wisselen" className="fixed bottom-4 right-4 z-[100] flex items-center gap-1 rounded-full border-2 border-primary bg-background p-1 text-sm font-medium shadow-xl">
+      <span className="px-2 text-xs uppercase tracking-wide text-muted-foreground">Omgeving</span>
       {(["public", "admin"] as const).map((m) => (
         <button
           key={m}
