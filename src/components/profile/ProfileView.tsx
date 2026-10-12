@@ -416,7 +416,7 @@ export function ProfileView({
         {profile.username && <NowPlaying handle={profile.username} theme={t} />}
         {profile.username && <ProfileIntegrations handle={profile.username} theme={t} />}
         {profile.username && <TipJarButton handle={profile.username} theme={t} />}
-        {!free && <ProfilePassport handle={profile.username} theme={t} />}
+        <ProfilePassport handle={profile.username} theme={t} />
         {profile.username && <ProfileGuestbook handle={profile.username} theme={t} />}
 
         {earlyBeliever && (
