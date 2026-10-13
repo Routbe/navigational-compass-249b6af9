@@ -985,3 +985,15 @@ select:focus-visible {
 .rout-wireframe :where(section, form, a, button, h1, img, [class*="rounded"]) { outline: 1px dashed color-mix(in srgb, var(--primary) 80%, transparent); outline-offset: -1px; box-shadow: none !important; }
 .rout-wireframe img { filter: grayscale(1) contrast(0.8); }
 .rout-wf-label { position: absolute; padding: 0 4px; font: 9px/14px ui-monospace, monospace; background: var(--primary); color: var(--primary-foreground); border-radius: 2px; white-space: nowrap; }
+
+/* Flat Hand-Drawn profile theme: rough ink borders on every card. */
+[data-profile-theme="inkt"] section,
+[data-profile-theme="inkt"] a[href],
+[data-profile-theme="inkt"] button {
+  border-width: 2px !important;
+  border-style: solid !important;
+  border-color: #141414 !important;
+  border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px !important;
+  box-shadow: 2px 3px 0 #141414;
+}
+[data-profile-theme="biophilic"] section { border-radius: 1.75rem !important; }
