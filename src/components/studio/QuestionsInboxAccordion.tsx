@@ -6,7 +6,7 @@ import { EyeOff, Send, Trash2 } from "lucide-react";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { answerMyQuestion, deleteMyQuestion, getMyQuestions, unpublishMyQuestion } from "@/lib/questions.functions";
-import { ANSWER_MAX, type } from "@/lib/questions-rules";
+import { ANSWER_MAX } from "@/lib/questions-rules";
 
 /** Studio inbox: anonymous questions; answering + "Publiceer" puts them on the public profile. */
 export function QuestionsInboxAccordion() {
