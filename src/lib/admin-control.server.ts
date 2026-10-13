@@ -60,12 +60,14 @@ export async function infrastructureOverview(input: { kind: "webhooks" | "subdom
   const like = input.search ? `%${input.search}%` : null;
   let rows: Row[];
   if (input.kind === "webhooks") {
+    const cursor = input.cursor ? JSON.parse(input.cursor) as { date: string; id: string } : null;
     rows = await sql`select id, source, kind, status, attempts, result, error,
       to_json(created_at) as created_at_iso, to_json(completed_at) as completed_at_iso,
       to_jsonb(w)->>'http_status' as http_status, to_jsonb(w)->>'direction' as direction
       from public.webhook_events w where (${like}::text is null or id ilike ${like} or source ilike ${like} or kind ilike ${like})
       and (${input.status} = 'all' or status = ${input.status})
-      and (${input.cursor}::text is null or id < ${input.cursor}) order by id desc limit 51` as Row[];
+      and (${cursor?.date ?? null}::timestamptz is null or (created_at, id) < (${cursor?.date ?? null}::timestamptz, ${cursor?.id ?? null}::text))
+      order by created_at desc, id desc limit 51` as Row[];
   } else if (input.kind === "subdomains") {
     rows = await sql`select id, username, display_name, subdomain_alias, subdomain_tier, root_subdomain_status,
       subdomain_enabled, to_json(updated_at) as updated_at_iso from public.profiles
@@ -80,5 +82,7 @@ export async function infrastructureOverview(input: { kind: "webhooks" | "subdom
       and (${input.cursor}::uuid is null or a.id > ${input.cursor}::uuid) order by a.id limit 51` as Row[];
   }
   const items = rows.slice(0, 50).map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, text(v)])));
-  return { items, nextCursor: rows.length > 50 ? String(rows[49]?.["id"]) : null, updatedAt: new Date().toISOString() };
+  const last = items.at(-1);
+  return { items, nextCursor: rows.length > 50 && last ? input.kind === "webhooks"
+    ? JSON.stringify({ date: last["created_at_iso"], id: last["id"] }) : last["id"] : null, updatedAt: new Date().toISOString() };
 }

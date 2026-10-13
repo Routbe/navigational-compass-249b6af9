@@ -18,8 +18,16 @@ export const getFinanceOverview = createServerFn({ method: "POST" }).middleware(
   });
 export const getInfrastructureOverview = createServerFn({ method: "POST" }).middleware([requireAuth])
   .inputValidator((d: unknown) => z.object({ kind: z.enum(["webhooks", "subdomains", "aliases"]), search: z.string().trim().max(120).default(""),
-    status: z.enum(["all", "failed", "done", "success", "processing", "active", "pending", "paused"]).default("all"), cursor: z.string().max(200).nullable().default(null) })
-    .superRefine((v, ctx) => { if (v.kind !== "webhooks" && v.cursor && !z.string().uuid().safeParse(v.cursor).success) ctx.addIssue({ code: "custom", message: "Invalid cursor" }); }).parse(d))
+    status: z.enum(["all", "failed", "done", "success", "processing", "active", "pending", "paused"]).default("all"), cursor: z.string().max(400).nullable().default(null) })
+    .superRefine((v, ctx) => {
+      if (!v.cursor) return;
+      if (v.kind !== "webhooks") {
+        if (!z.string().uuid().safeParse(v.cursor).success) ctx.addIssue({ code: "custom", message: "Invalid cursor" });
+      } else {
+        try { z.object({ date: z.string().datetime(), id: z.string().max(200) }).parse(JSON.parse(v.cursor)); }
+        catch { ctx.addIssue({ code: "custom", message: "Invalid cursor" }); }
+      }
+    }).parse(d))
   .handler(async ({ data, context }) => {
     const { assertAdminRole } = await import("./admin.server");
     await assertAdminRole(context.userId);
