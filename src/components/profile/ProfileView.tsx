@@ -2,6 +2,7 @@ import { NowPlaying, useNowPlaying } from "@/components/profile/NowPlaying";
 import { SnapchatProfile } from "@/components/profile/SnapchatProfile";
 import { ProfileIntegrations } from "@/components/profile/ProfileIntegrations";
 import { ProfileGuestbook } from "@/components/profile/ProfileGuestbook";
+import { ProfileQuestions } from "@/components/profile/ProfileQuestions";
 import { TipJarButton } from "@/components/profile/TipJarButton";
 import { useWireframeMode, WireframeOverlay } from "@/components/profile/WireframeMode";
 import { cn } from "@/lib/utils";
@@ -293,6 +294,7 @@ export function ProfileView({
   return (
     <main
       ref={mainRef}
+      data-profile-theme={t.id}
       className={`relative isolate min-h-screen w-full overflow-hidden px-4 pb-12 ${banner ? "pt-0" : "pt-12"} ${wireframe ? "rout-wireframe" : ""}`}
       style={{
         ...surface,
@@ -418,6 +420,7 @@ export function ProfileView({
         {profile.username && <TipJarButton handle={profile.username} theme={t} />}
         <ProfilePassport handle={profile.username} theme={t} />
         {profile.username && <ProfileGuestbook handle={profile.username} theme={t} />}
+        {profile.username && <ProfileQuestions handle={profile.username} theme={t} />}
 
         {earlyBeliever && (
           <EarlyBelieverBadge
