@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture rules
-- Neon is the only database, reached exclusively through the Lovable Neon connector gateway (`src/lib/neon.ts`: `sql`, `neon()`, `GatewayPool`; keys `LOVABLE_API_KEY` + `NEON_API_KEY`), never a direct connection string. Schema changes are idempotent `db/NN_*.sql` files; runtime `create table if not exists` safety nets go through `runSchemaEnsure`. Why: the connection string stays in Lovable; gateway calls are stateless so cross-request transactions do not exist.
+- Neon is the only database: use src/lib/neon.ts gateway, never connection strings. Idempotent migrations live in db/NN_*.sql; runtime DDL uses runSchemaEnsure. Why: credentials stay in Lovable; transactions cannot span requests.
 - Login ON rout.be (Better Auth, `better-auth.server.ts`) and login VIA rout.be (OIDC provider, `src/lib/oauth/*`) never share config; provider env vars use the `ROUT_PROVIDER_*` prefix. Why: one role must not break the other.
 - Sign-in tiles always render; unconfigured providers show a notice. OAuth callbacks for a provider with missing credentials are refused before Better Auth is created with `provider_not_configured` (400) plus a server warning (`api_/auth/$.ts` + `isProviderConfigured`). Why: missing keys must never hide options or crash auth.
 - Public profile visibility (`publicProfile`, `timelineVisible` in `display_prefs`) is enforced server-side in the public profile/timeline functions. Why: client checks leak data.
@@ -25,8 +25,10 @@
 - 2FA/passkeys: Better Auth `twoFactor` + `@better-auth/passkey`, tables in `neon_auth` (db/77). Why: no custom crypto.
 - Migrations are applied with `bun scripts/migrate-gateway.ts` (splits each `db/NN_*.sql` into statements, one gateway batch = one transaction, tracked in `schema_migrations`). Why: the gateway rejects multi-statement queries and no direct connection string exists.
 - Deployment mode comes only from `src/lib/app-mode.ts` (`VITE_APP_MODE`/`APP_MODE`): `appModeMiddleware` in `src/start.ts` 404s admin paths in public mode and confines admin mode to the portal (noindex), `assertAdminRole` refuses in public mode, and `api_.auth.$.ts` refuses social providers in admin mode. Why: the split must hold server-side, never only in the UI.
-- Build-time hard split: `vite.config.ts` passes `routeIgnorePattern(buildMode(process.env))` (`src/lib/app-mode-routes.ts`) as the router's `routeFileIgnorePattern`, so public builds contain no admin route files and admin builds only portal + sign-in routes; new admin routes must be named `admin.*`. Why: admin code must never ship in the public bundle; runtime middleware stays as defence in depth.
+- Build mode filters route files via app-mode-routes.ts; admin files use admin.* names. Why: public bundles must exclude admin code.
 - Shells load lazily by path; public builds exclude admin code. Preview mode overrides are UI-only. Why: previews must never loosen server access.
 - Stamps: lock links before redeeming in one gateway transaction; enforce public profile visibility. Why: no cap overruns or private collections leaked.
 - Open-web ownership is proven only by the server-side bio-check (`open-web-rules.ts` + `checkBioVerify`): `verified_via` is 'sso' or 'bio', and changing the handle drops bio verification. User-supplied fetch hosts (RSS, Mastodon) must pass `isPublicHost`. Why: no OAuth, no trust in client input, no SSRF.
 - Guestbook (`guestbook.server.ts`, db/90): only signed-in members post, owners pin/delete via `owner_id` checks, public reads return pinned notes of public profiles only. Why: verified network effect, no spam, privacy enforced server-side.
+
+- Admin control uses authenticated RPCs with assertAdminRole, keyset pages and explicit errors; transport logs store actual HTTP status/direction, never URLs or request bodies. Why: protect private data and avoid invented telemetry.
