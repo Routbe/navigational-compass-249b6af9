@@ -75,7 +75,9 @@ import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminContactRouteImport } from './routes/_authenticated/admin.contact'
 import { Route as AuthenticatedAdminCustomBadgesRouteImport } from './routes/_authenticated/admin.custom-badges'
+import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated/admin.finance'
 import { Route as AuthenticatedAdminGiftCardsRouteImport } from './routes/_authenticated/admin.gift-cards'
+import { Route as AuthenticatedAdminInfraRouteImport } from './routes/_authenticated/admin.infra'
 import { Route as AuthenticatedAdminIntegrationsRouteImport } from './routes/_authenticated/admin.integrations'
 import { Route as AuthenticatedAdminMembersRouteImport } from './routes/_authenticated/admin.members'
 import { Route as AuthenticatedAdminOauthAppsRouteImport } from './routes/_authenticated/admin.oauth-apps'
@@ -491,12 +493,23 @@ const AuthenticatedAdminCustomBadgesRoute =
     path: '/custom-badges',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminFinanceRoute =
+  AuthenticatedAdminFinanceRouteImport.update({
+    id: '/finance',
+    path: '/finance',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminGiftCardsRoute =
   AuthenticatedAdminGiftCardsRouteImport.update({
     id: '/gift-cards',
     path: '/gift-cards',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminInfraRoute = AuthenticatedAdminInfraRouteImport.update({
+  id: '/infra',
+  path: '/infra',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminIntegrationsRoute =
   AuthenticatedAdminIntegrationsRouteImport.update({
     id: '/integrations',
@@ -1021,7 +1034,9 @@ export interface FileRoutesByFullPath {
   '/auth/': typeof AuthIndexRoute
   '/admin/contact': typeof AuthenticatedAdminContactRoute
   '/admin/custom-badges': typeof AuthenticatedAdminCustomBadgesRoute
+  '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/gift-cards': typeof AuthenticatedAdminGiftCardsRoute
+  '/admin/infra': typeof AuthenticatedAdminInfraRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/members': typeof AuthenticatedAdminMembersRoute
   '/admin/oauth-apps': typeof AuthenticatedAdminOauthAppsRoute
@@ -1168,7 +1183,9 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthIndexRoute
   '/admin/contact': typeof AuthenticatedAdminContactRoute
   '/admin/custom-badges': typeof AuthenticatedAdminCustomBadgesRoute
+  '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/gift-cards': typeof AuthenticatedAdminGiftCardsRoute
+  '/admin/infra': typeof AuthenticatedAdminInfraRoute
   '/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/admin/members': typeof AuthenticatedAdminMembersRoute
   '/admin/oauth-apps': typeof AuthenticatedAdminOauthAppsRoute
@@ -1318,7 +1335,9 @@ export interface FileRoutesById {
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/admin/contact': typeof AuthenticatedAdminContactRoute
   '/_authenticated/admin/custom-badges': typeof AuthenticatedAdminCustomBadgesRoute
+  '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/_authenticated/admin/gift-cards': typeof AuthenticatedAdminGiftCardsRoute
+  '/_authenticated/admin/infra': typeof AuthenticatedAdminInfraRoute
   '/_authenticated/admin/integrations': typeof AuthenticatedAdminIntegrationsRoute
   '/_authenticated/admin/members': typeof AuthenticatedAdminMembersRoute
   '/_authenticated/admin/oauth-apps': typeof AuthenticatedAdminOauthAppsRoute
@@ -1470,7 +1489,9 @@ export interface FileRouteTypes {
     | '/auth/'
     | '/admin/contact'
     | '/admin/custom-badges'
+    | '/admin/finance'
     | '/admin/gift-cards'
+    | '/admin/infra'
     | '/admin/integrations'
     | '/admin/members'
     | '/admin/oauth-apps'
@@ -1617,7 +1638,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/contact'
     | '/admin/custom-badges'
+    | '/admin/finance'
     | '/admin/gift-cards'
+    | '/admin/infra'
     | '/admin/integrations'
     | '/admin/members'
     | '/admin/oauth-apps'
@@ -1766,7 +1789,9 @@ export interface FileRouteTypes {
     | '/auth/'
     | '/_authenticated/admin/contact'
     | '/_authenticated/admin/custom-badges'
+    | '/_authenticated/admin/finance'
     | '/_authenticated/admin/gift-cards'
+    | '/_authenticated/admin/infra'
     | '/_authenticated/admin/integrations'
     | '/_authenticated/admin/members'
     | '/_authenticated/admin/oauth-apps'
@@ -2414,11 +2439,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCustomBadgesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/finance': {
+      id: '/_authenticated/admin/finance'
+      path: '/finance'
+      fullPath: '/admin/finance'
+      preLoaderRoute: typeof AuthenticatedAdminFinanceRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/gift-cards': {
       id: '/_authenticated/admin/gift-cards'
       path: '/gift-cards'
       fullPath: '/admin/gift-cards'
       preLoaderRoute: typeof AuthenticatedAdminGiftCardsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/infra': {
+      id: '/_authenticated/admin/infra'
+      path: '/infra'
+      fullPath: '/admin/infra'
+      preLoaderRoute: typeof AuthenticatedAdminInfraRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/integrations': {
@@ -3017,7 +3056,9 @@ const UsernameRouteWithChildren = UsernameRoute._addFileChildren(
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminContactRoute: typeof AuthenticatedAdminContactRoute
   AuthenticatedAdminCustomBadgesRoute: typeof AuthenticatedAdminCustomBadgesRoute
+  AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
   AuthenticatedAdminGiftCardsRoute: typeof AuthenticatedAdminGiftCardsRoute
+  AuthenticatedAdminInfraRoute: typeof AuthenticatedAdminInfraRoute
   AuthenticatedAdminIntegrationsRoute: typeof AuthenticatedAdminIntegrationsRoute
   AuthenticatedAdminMembersRoute: typeof AuthenticatedAdminMembersRoute
   AuthenticatedAdminOauthAppsRoute: typeof AuthenticatedAdminOauthAppsRoute
@@ -3033,7 +3074,9 @@ interface AuthenticatedAdminRouteChildren {
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminContactRoute: AuthenticatedAdminContactRoute,
   AuthenticatedAdminCustomBadgesRoute: AuthenticatedAdminCustomBadgesRoute,
+  AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
   AuthenticatedAdminGiftCardsRoute: AuthenticatedAdminGiftCardsRoute,
+  AuthenticatedAdminInfraRoute: AuthenticatedAdminInfraRoute,
   AuthenticatedAdminIntegrationsRoute: AuthenticatedAdminIntegrationsRoute,
   AuthenticatedAdminMembersRoute: AuthenticatedAdminMembersRoute,
   AuthenticatedAdminOauthAppsRoute: AuthenticatedAdminOauthAppsRoute,
