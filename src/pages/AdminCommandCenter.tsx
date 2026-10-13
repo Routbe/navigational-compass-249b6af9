@@ -13,7 +13,7 @@ export default function AdminCommandCenter() {
     { label: "SEPA reviews", count: data.sepaReviews, to: "/admin/finance" },
     { label: "Mislukte webhooks", count: data.failedWebhooks, to: "/admin/infra" },
   ] as const;
-  return <AppLayout><ControlHeader title="Mission Control" subtitle="Leden, identiteit en operationele aandachtspunten." refreshing={isFetching} refresh={() => void refetch()} />
+  return <AppLayout width="wide"><ControlHeader title="Mission Control" subtitle="Leden, identiteit en operationele aandachtspunten." refreshing={isFetching} refresh={() => void refetch()} />
     <ControlError error={isRefetchError} />
     <div className="mb-10 grid grid-cols-2 gap-6 lg:grid-cols-4">
       <ControlMetric label="Actieve leden" value={data.activeMembers} detail={`${data.totalMembers} profielen totaal`} />

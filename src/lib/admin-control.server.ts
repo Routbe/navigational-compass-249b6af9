@@ -75,11 +75,19 @@ export async function infrastructureOverview(input: { kind: "webhooks" | "subdom
       and (${like}::text is null or subdomain_alias ilike ${like} or username ilike ${like})
       and (${input.cursor}::uuid is null or id > ${input.cursor}::uuid) order by id limit 51` as Row[];
   } else {
-    rows = await sql`select a.id, a.alias, a.target_email, a.status, p.username,
-      to_json(a.updated_at) as updated_at_iso from public.email_aliases a left join public.profiles p on p.id = a.user_id
-      where (${like}::text is null or a.alias ilike ${like} or a.target_email ilike ${like} or p.username ilike ${like})
-      and (${input.status} = 'all' or a.status = ${input.status})
-      and (${input.cursor}::uuid is null or a.id > ${input.cursor}::uuid) order by a.id limit 51` as Row[];
+    rows = await sql`with aliases as (
+      select 'alias:' || a.id::text as id, a.alias, a.target_email, a.status, p.username,
+        to_json(a.updated_at) as updated_at_iso from public.email_aliases a left join public.profiles p on p.id = a.user_id
+      union all
+      select 'profile:' || p.id::text, p.username || '@rout.be', p.forwarding_email,
+        coalesce(p.alias_status, 'pending'), p.username, to_json(p.updated_at)
+        from public.profiles p where p.username is not null and p.forwarding_email is not null
+          and coalesce(p.alias_status, 'none') <> 'none'
+          and not exists (select 1 from public.email_aliases a where a.alias = p.username || '@rout.be')
+    ) select * from aliases
+      where (${like}::text is null or alias ilike ${like} or target_email ilike ${like} or username ilike ${like})
+      and (${input.status} = 'all' or status = ${input.status})
+      and (${input.cursor}::text is null or id > ${input.cursor}) order by id limit 51` as Row[];
   }
   const items = rows.slice(0, 50).map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, text(v)])));
   const last = items.at(-1);

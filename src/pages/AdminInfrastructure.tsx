@@ -20,7 +20,7 @@ export default function AdminInfrastructure() {
   const { data, refetch, isFetching, isRefetchError } = useSuspenseQuery(infraQuery(kind, search, status, cursors.at(-1) ?? null));
   const changeKind = (v: string) => { if (v !== "webhooks" && v !== "subdomains" && v !== "aliases") return; setKind(v); setStatus("all"); setSearch(""); setDraft(""); setCursors([null]); };
   const headers = kind === "webhooks" ? ["Ontvangen", "Bron / event", "Richting", "HTTP", "Verwerking", "Pogingen", "Resultaat / fout"] : kind === "subdomains" ? ["Lid", "Subdomein", "Namespace", "Status"] : ["Alias", "Lid", "Bestemming", "Status", "Bijgewerkt"];
-  return <AppLayout><ControlHeader title="Infrastructuur & Logs" subtitle="Webhookverwerking, geclaimde subdomeinen en e-mailaliassen." refreshing={isFetching} refresh={() => void refetch()} />
+  return <AppLayout width="wide"><ControlHeader title="Infrastructuur & Logs" subtitle="Webhookverwerking, geclaimde subdomeinen en e-mailaliassen." refreshing={isFetching} refresh={() => void refetch()} />
     <ControlError error={isRefetchError} />
     <Tabs value={kind} onValueChange={changeKind}><TabsList className="mb-6"><TabsTrigger value="webhooks">Webhooks</TabsTrigger><TabsTrigger value="subdomains">Subdomeinen</TabsTrigger><TabsTrigger value="aliases">E-mailaliassen</TabsTrigger></TabsList></Tabs>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); setSearch(draft); setCursors([null]); }}><Input aria-label="Zoeken in infrastructuur" placeholder="Zoeken…" value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={120} /><Button variant="outline" size="icon" aria-label="Zoeken"><Search /></Button></form>

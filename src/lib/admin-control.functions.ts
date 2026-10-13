@@ -21,7 +21,9 @@ export const getInfrastructureOverview = createServerFn({ method: "POST" }).midd
     status: z.enum(["all", "failed", "done", "success", "processing", "active", "pending", "paused"]).default("all"), cursor: z.string().max(400).nullable().default(null) })
     .superRefine((v, ctx) => {
       if (!v.cursor) return;
-      if (v.kind !== "webhooks") {
+      if (v.kind === "aliases") {
+        if (!/^(alias|profile):[0-9a-f-]{36}$/.test(v.cursor)) ctx.addIssue({ code: "custom", message: "Invalid cursor" });
+      } else if (v.kind === "subdomains") {
         if (!z.string().uuid().safeParse(v.cursor).success) ctx.addIssue({ code: "custom", message: "Invalid cursor" });
       } else {
         try { z.object({ date: z.string().datetime(), id: z.string().max(200) }).parse(JSON.parse(v.cursor)); }

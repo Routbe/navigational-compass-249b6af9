@@ -13,7 +13,7 @@ export default function AdminFinance() {
   const [search, setSearch] = useState("");
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const { data, refetch, isFetching, isRefetchError } = useSuspenseQuery(financeQuery(search, cursors.at(-1) ?? null));
-  return <AppLayout><ControlHeader title="Financieel & SEPA" subtitle="Rekeninghouders, geverifieerde identiteit en openstaande reviews." refreshing={isFetching} refresh={() => void refetch()} />
+  return <AppLayout width="wide"><ControlHeader title="Financieel & SEPA" subtitle="Rekeninghouders, geverifieerde identiteit en openstaande reviews." refreshing={isFetching} refresh={() => void refetch()} />
     <ControlError error={isRefetchError} />
     <div className="mb-8 grid grid-cols-2 gap-6 lg:grid-cols-3"><ControlMetric label="Ingestelde IBAN’s" value={data.total} /><ControlMetric label="Actieve Tip Jars" value={data.enabled} /><ControlMetric label="Open SEPA reviews" value={data.openReviews} /></div>
     <section className="mb-10"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">IBAN-register</h2>
