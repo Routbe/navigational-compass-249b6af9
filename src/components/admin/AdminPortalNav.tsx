@@ -33,6 +33,7 @@ const GROUPS = [
   {
     label: "Financieel",
     items: [
+      { to: "/admin/finance", label: "Financieel & SEPA", icon: Landmark },
       { to: "/admin/sepa", label: "SEPA review", icon: Landmark },
       { to: "/admin/gift-cards", label: "Cadeaubonnen", icon: Gift },
     ],
@@ -40,6 +41,7 @@ const GROUPS = [
   {
     label: "Infrastructuur",
     items: [
+      { to: "/admin/infra", label: "Infrastructuur & Logs", icon: Webhook },
       { to: "/admin/subdomains", label: "Subdomeinen", icon: Globe },
       { to: "/admin/webhooks", label: "Webhooks", icon: Webhook },
       { to: "/admin/ops", label: "Operations", icon: Wrench },
