@@ -13,6 +13,12 @@ export const isAutoReachProvider = (provider: string) =>
   (AUTO_REACH_PROVIDERS as readonly string[]).includes(provider);
 export const countsTowardsReach = (provider: string) => !NO_REACH.has(provider);
 
+/** Platform-specifieke benaming: YouTube heeft abonnees, de rest volgers. */
+export function followerLabel(provider: string, count = 2): string {
+  if (provider === "youtube") return count === 1 ? "abonnee" : "abonnees";
+  return count === 1 ? "volger" : "volgers";
+}
+
 /** One connected Hub integration as shown in the reach modal. */
 export type ReachAccount = {
   provider: string;

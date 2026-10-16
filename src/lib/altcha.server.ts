@@ -49,6 +49,8 @@ async function hmacKey(): Promise<string> {
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
 export async function createAltchaChallenge(opts: { hard?: boolean } = {}): Promise<AltchaChallenge> {
+  // Lazy cleanup instead of an hourly cron: ~5% of challenges purge expired replay rows, non-blocking.
+  if (Math.random() < 0.05) void purgeExpiredAltcha().catch(() => undefined);
   const maxnumber = opts.hard ? ALTCHA_HARD_MAX : ALTCHA_DEFAULT_MAX;
   const expires = Math.floor(Date.now() / 1000) + TTL_SECONDS;
   const salt = `${randomBytes(12).toString("hex")}?expires=${expires}&d=${opts.hard ? "h" : "n"}`;
@@ -61,20 +63,6 @@ function safeEqualHex(a: string, b: string) {
   const ab = Buffer.from(a, "utf8");
   const bb = Buffer.from(b, "utf8");
   return ab.length === bb.length && timingSafeEqual(ab, bb);
-}
-
-let ensured = false;
-async function ensureTable() {
-  if (ensured) return;
-  const { runSchemaEnsure } = await import("@/lib/db/schema-ensure.server");
-  await runSchemaEnsure(
-    () => sql`create table if not exists public.altcha_used (
-      signature text primary key,
-      expires_at timestamptz not null
-    )`,
-    "altcha_used",
-  );
-  ensured = true;
 }
 
 /** Checks a proof (base64 JSON). Consumes it on success, so it works exactly once. */
@@ -113,16 +101,24 @@ export async function verifyAltcha(
   if (!safeEqualHex(sha256(salt + number), challenge)) return { ok: false, reason: "bad_solution" };
 
   try {
-    await ensureTable();
-    const rows = (await sql`
+    // db/54 owns the table: the least-privilege login role must never run DDL.
+    const insert = () => sql`
       insert into public.altcha_used (signature, expires_at)
       values (${signature}, to_timestamp(${expires}))
       on conflict (signature) do nothing
       returning signature
-    `) as unknown[];
+    `;
+    let rows: unknown[];
+    try {
+      rows = (await insert()) as unknown as unknown[];
+    } catch {
+      // One immediate retry: a transient gateway/network blip must never turn
+      // a valid, freshly solved proof into a failed sign-in.
+      rows = (await insert()) as unknown as unknown[];
+    }
     if (rows.length === 0) return { ok: false, reason: "replayed" };
   } catch (err) {
-    console.error("[altcha] replay store failed:", err instanceof Error ? err.message : err);
+    console.error("[ALTCHA Error]: replay store unavailable:", err instanceof Error ? err.message : err);
     return { ok: false, reason: "store_unavailable" };
   }
   return { ok: true };
@@ -155,7 +151,6 @@ export async function identityNeedsHardChallenge(identityHash: string | null | u
 
 /** Deletes expired replay rows (cron). */
 export async function purgeExpiredAltcha(): Promise<{ deleted: number }> {
-  await ensureTable();
   const rows = (await sql`delete from public.altcha_used where expires_at < now() returning 1`) as unknown[];
   return { deleted: rows.length };
 }

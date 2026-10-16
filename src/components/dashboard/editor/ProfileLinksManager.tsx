@@ -2,11 +2,14 @@ import { type Dispatch, type SetStateAction, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  Award,
+  MessageSquare,
+  Users,
   ChevronDown,
   GripVertical,
   ImagePlus,
   Pin,
-  Plus,
+
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +30,7 @@ import {
   PROMO_COPY_PRESETS,
   type ProfileBlock,
 } from "@/lib/profile";
+import { isProfileSectionKind } from "@/lib/profile-section-blocks";
 import { BlockRulesPopover } from "@/components/studio/BlockRulesPopover";
 import { BookingBlockSettings } from "@/components/dashboard/BookingBlockSettings";
 import { GalleryBlockSettings } from "@/components/dashboard/GalleryBlockSettings";
@@ -144,19 +148,12 @@ export function ProfileLinksManager({
   return (
     <section className="space-y-3 rounded-2xl border border-border bg-card p-4 sm:p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium">Components</h2>
+        <h2 className="text-lg font-medium">Componenten</h2>
         <span className="text-[11px] text-muted-foreground">
-          {blocks.filter((b) => !b.hidden).length} visible
+          {blocks.filter((b) => !b.hidden).length} zichtbaar
         </span>
       </div>
 
-      <button
-        type="button"
-        onClick={onOpenAddDrawer}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-foreground text-sm font-medium text-background transition-opacity hover:opacity-90"
-      >
-        <Plus className="h-4 w-4" aria-hidden /> + Add component
-      </button>
 
       <div className="flex flex-wrap gap-2">
         {QUICK_CREATE.map((q) => (
@@ -181,6 +178,8 @@ export function ProfileLinksManager({
         {blocks.map((b, index) => {
           const hint = inputHint(b.kind);
           const open = openBlock === b.id;
+          const section = isProfileSectionKind(b.kind);
+          const SectionIcon = b.kind === "widget:guestbook" ? MessageSquare : b.kind === "widget:badges" ? Award : Users;
           return (
             <li
               key={b.id}
@@ -218,11 +217,11 @@ export function ProfileLinksManager({
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40"
                   style={{ color: brandOf(b.kind) }}
                 >
-                  <SocialPlatformIcon
+                  {section ? <SectionIcon className="h-4 w-4 text-current" aria-hidden /> : <SocialPlatformIcon
                     source={b.value?.trim() || b.kind}
                     iconMode={b.iconMode}
                     className="h-4 w-4 text-current"
-                  />
+                  />}
                 </span>
                 <button
                   type="button"
@@ -231,7 +230,7 @@ export function ProfileLinksManager({
                 >
                   <span className="block truncate text-sm font-medium">{b.label}</span>
                   <span className="block truncate text-[11px] text-muted-foreground">
-                    {b.value ? blockHref(b) : "Not filled in yet"}
+                    {section ? b.label : b.value ? blockHref(b) : "Not filled in yet"}
                   </span>
                 </button>
                 <button
@@ -265,7 +264,9 @@ export function ProfileLinksManager({
 
               {open && (
                 <div className="mt-3 space-y-2 border-t border-border pt-3">
-                  {b.kind === "media_gallery" ? (
+                  {section ? (
+                    <Input aria-label="Titel" value={b.label} maxLength={100} onChange={(e) => patch(b.id, { label: e.target.value })} />
+                  ) : b.kind === "media_gallery" ? (
                     <GalleryBlockSettings
                       value={b.value}
                       onChange={(value) => patch(b.id, { value })}

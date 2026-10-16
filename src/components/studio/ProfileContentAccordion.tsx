@@ -2,7 +2,7 @@ import { type Dispatch, type ReactNode, type SetStateAction, useState } from "re
 import { Plus } from "lucide-react";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ProfileLinksManager } from "@/components/dashboard/editor/ProfileLinksManager";
-import { AddComponentModal } from "@/components/studio/AddComponentModal";
+import { AddComponentModal, type WidgetId } from "@/components/studio/AddComponentModal";
 import { scheduledBlocks, type ProfileBlock } from "@/lib/profile";
 import type { QuickCreateOption } from "@/types/profile-editor";
 
@@ -17,6 +17,10 @@ interface Props {
   onAddKind: (kind: string, value?: string) => void;
   /** Extra secties (referrals, QR, badges …) onder de linklijst. */
   children?: ReactNode;
+  /** Profielhandle voor bio-verificatie in de kluis. */
+  handle?: string;
+  /** Zet een profielwidget aan vanuit de catalogus. */
+  onWidget?: (id: WidgetId) => void;
 }
 
 /**
@@ -34,6 +38,8 @@ export function ProfileContentAccordion({
   onQuickCreate,
   onAddKind,
   children,
+  handle,
+  onWidget,
 }: Props) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const live = scheduledBlocks(blocks).length;
@@ -57,12 +63,14 @@ export function ProfileContentAccordion({
           onClick={() => setLibraryOpen(true)}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border text-sm font-medium transition-colors hover:bg-muted"
         >
-          <Plus className="h-4 w-4" aria-hidden /> + Inhoudscomponent toevoegen
+          <Plus className="h-4 w-4" aria-hidden /> Component toevoegen
         </button>
         <AddComponentModal
           open={libraryOpen}
           onClose={() => setLibraryOpen(false)}
           onAdd={onAddKind}
+          handle={handle}
+          onWidget={onWidget}
         />
 
         <ProfileLinksManager

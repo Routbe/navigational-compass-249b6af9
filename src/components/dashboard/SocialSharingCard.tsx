@@ -42,8 +42,11 @@ export function SocialSharingCard({
   const sInput = { handle, displayName, avatarUrl, bio: prefs.bioNl ?? prefs.bioEn ?? prefs.bioFr ?? bio };
   const defaultTitle = suggestMetaTitle(sInput);
   const defaultDescription = suggestMetaDescription(sInput);
-  const suggestedImage = suggestOgImage(sInput);
-  const previewImage = prefs.ogImageUrl || suggestedImage;
+  const autoCard = clean ? `/api/public/og/${clean}.png` : null;
+  const suggestedImage = suggestOgImage(sInput) || autoCard;
+  // Altijd een automatische ROUT-kaart als standaard; eigen keuze overschrijft, wissen = terug naar auto.
+  const previewImage = prefs.ogImageUrl || autoCard || suggestedImage;
+  const isAuto = !prefs.ogImageUrl && !prefs.metaTitle && !prefs.metaDescription;
   const fieldActions = (onSuggest: () => void, onClear: () => void) => (
     <div className="flex gap-1">
       <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onSuggest}>
@@ -135,7 +138,16 @@ export function SocialSharingCard({
       </div>
 
       <div className="space-y-2">
-        <span className="input-label">Voorbeeld</span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="input-label">Voorbeeld</span>
+          {isAuto ? (
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">Automatisch door ROUT gemaakt</span>
+          ) : (
+            <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => { setPref("ogImageUrl", null); setPref("metaTitle", null); setPref("metaDescription", null); }}>
+              Terug naar automatisch
+            </Button>
+          )}
+        </div>
         <SocialPreview
           title={prefs.metaTitle || defaultTitle}
           description={prefs.metaDescription || defaultDescription}

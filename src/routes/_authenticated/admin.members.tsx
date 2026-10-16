@@ -116,6 +116,7 @@ function MembersPage() {
                       {r.username ? `@${r.username}` : "geen handle"} · {r.email ?? "geen e-mail"}
                     </p>
                   </div>
+                  {r.verified ? <Badge>Geverifieerd</Badge> : <Badge variant="outline">Niet geverifieerd</Badge>}
                   <Badge variant={s === "active" ? "secondary" : "destructive"}>{STATUS_LABEL[s]}</Badge>
                 </button>
               );
