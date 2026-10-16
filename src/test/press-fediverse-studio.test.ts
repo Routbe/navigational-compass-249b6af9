@@ -70,7 +70,8 @@ describe("geboortedatum", () => {
 
 describe("profielteksten", () => {
   it("valt terug op Engels", () => {
-    expect(profileText("de", "saveContact")).toBe("Save contact");
+    expect(profileText("de", "saveContact")).toBe("Kontakt speichern");
+    expect(profileText("es", "saveContact")).toBe("Save contact");
     expect(profileText("nl-BE", "saveContact")).toBe("Contact opslaan");
   });
 });
