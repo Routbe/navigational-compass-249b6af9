@@ -4,7 +4,7 @@ import { magicLink } from "better-auth/plugins/magic-link";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { passkey } from "@better-auth/passkey";
-import { GatewayPool } from "@/lib/neon";
+import { GatewayPool, databaseTransport, hasDatabase } from "@/lib/neon";
 import { APP_DOMAINS } from "@/lib/app-domains";
 import { canonicalAppUrl, isApprovedHost } from "@/lib/app-url";
 
@@ -53,7 +53,7 @@ function envAny(name: string): string | undefined {
 export function resolveAuthSecret(): { secret: string; derived: boolean } | null {
   const direct = envAny("BETTER_AUTH_SECRET");
   if (direct && direct.length >= 32) return { secret: direct, derived: false };
-  const seed = env("SESSION_SECRET") ?? env("OAUTH_STATE_SECRET") ?? env("NEON_API_KEY");
+  const seed = env("SESSION_SECRET") ?? env("OAUTH_STATE_SECRET") ?? env("DATABASE_URL") ?? env("NEON_API_KEY");
   if (!seed) return null;
   const secret = createHash("sha256").update(`rout-better-auth:${seed}`).digest("hex");
   return { secret, derived: true };
@@ -88,10 +88,13 @@ function requestOrigin(request?: Request): string | null {
   return `${local ? proto : "https"}://${host}`;
 }
 
-/** The base URL OAuth callbacks are built on: configured, else approved host, else canonical. */
+/** The base URL OAuth callbacks are built on: the approved request host first, else configured, else canonical. */
 function baseUrlFor(request?: Request): string {
   const configured = env("BETTER_AUTH_URL") ?? env("NEXT_PUBLIC_APP_URL");
   const origin = requestOrigin(request);
+  // The state cookie is set on the request host; returning to a different
+  // configured host loses it → state_mismatch. Follow the live host instead.
+  if (origin && isApprovedHost(new URL(origin).host)) return origin;
   if (configured) {
     const base = configured.trim().replace(/\/+$/, "").replace(/\/api\/auth$/, "");
     const normalized = /^https?:\/\//.test(base) ? base : `https://${base}`;
@@ -129,7 +132,11 @@ function gitlabIssuer(): string {
 }
 
 export function createRoutAuth(request?: Request) {
-  if (!process.env["NEON_API_KEY"] || !process.env["LOVABLE_API_KEY"]) throw new Error("Neon-connector ontbreekt (NEON_API_KEY).");
+  // Either transport is fine: DATABASE_URL on Vercel, the Neon connector in Lovable.
+  if (!hasDatabase()) {
+    console.error("[auth] no database configured: set DATABASE_URL (Vercel) or link the Neon connector.");
+    throw new Error("DATABASE_URL ontbreekt: geen databaseverbinding ingesteld.");
+  }
   const resolved = resolveAuthSecret();
   if (!resolved) throw new Error("BETTER_AUTH_SECRET ontbreekt.");
   if (resolved.derived) console.warn("[auth] BETTER_AUTH_SECRET missing or <32 chars; using derived fallback. Set it on Vercel.");
@@ -198,9 +205,12 @@ export function createRoutAuth(request?: Request) {
   if (oidc && discoveryUrl) {
     genericConfigs.push({ providerId: "oidc", discoveryUrl, ...oidc, scopes: ["openid", "email", "profile"], pkce: true });
   } else if (!oidc && !discoveryUrl) {
+    // Discover on the live (approved) request host so dev/preview never call a dead port.
+    const live = requestOrigin(request);
+    const issuerBase = live && isApprovedHost(new URL(live).host) ? live : canonicalAppUrl();
     genericConfigs.push({
       providerId: "oidc",
-      discoveryUrl: `${canonicalAppUrl()}/.well-known/openid-configuration`,
+      discoveryUrl: `${issuerBase}/.well-known/openid-configuration`,
       clientId: NATIVE_OIDC_CLIENT_ID,
       scopes: ["openid", "email", "profile"],
       pkce: true,
@@ -330,13 +340,25 @@ export function createRoutAuth(request?: Request) {
     plugins: plugins as never,
     trustedOrigins: [
       canonicalAppUrl(),
-      ...APP_DOMAINS.flatMap((d) => [`https://${d}`, `https://*.${d}`]),
+      // Both schemes, apex + wildcards: logins must work on https://rout.be
+      // (bare apex, no www) AND http://rout.be without an origin mismatch.
+      ...APP_DOMAINS.flatMap((d) => [`https://${d}`, `https://*.${d}`, `http://${d}`, `http://*.${d}`]),
       "http://localhost:8080",
       "http://localhost:*",
       "http://127.0.0.1:*",
       "https://*.lovableproject.com",
       "https://*.lovable.app",
-      ...(origin ? [origin] : []),
+      // Both split deployments (rout.be public, rout.dlp.li admin) + configured base.
+      "https://rout.dlp.li",
+      "https://www.rout.be",
+      ...[env("BETTER_AUTH_URL"), env("NEXT_PUBLIC_APP_URL")].flatMap((u) => {
+        try {
+          return u ? [new URL(/^https?:\/\//.test(u.trim()) ? u.trim() : `https://${u.trim()}`).origin] : [];
+        } catch {
+          return [];
+        }
+      }),
+      ...(origin && isApprovedHost(new URL(origin).host) ? [origin] : []),
     ],
     advanced: {
       // Always secure: production is https behind Vercel's proxy even when the
@@ -394,7 +416,7 @@ export async function liveAuthChecks() {
   let database = false;
   let databaseError: string | null = null;
   try {
-    if (process.env["NEON_API_KEY"]) {
+    if (hasDatabase()) {
       const pool = new GatewayPool();
       await pool.query("select 1 from neon_auth.verification limit 1");
       database = true;
@@ -402,7 +424,7 @@ export async function liveAuthChecks() {
   } catch (e) {
     databaseError = e instanceof Error ? e.message.slice(0, 120) : "unknown";
   }
-  return { database, databaseError, emailService: Boolean(env("BREVO_API_KEY")) };
+  return { database, databaseError, databaseTransport: databaseTransport(), emailService: Boolean(env("BREVO_API_KEY")) };
 }
 
 /** Diagnostic report — names only, never values. */
@@ -410,7 +432,7 @@ export function authDiagnostics(request?: Request) {
   const base = baseUrlFor(request);
   const resolved = resolveAuthSecret();
   const core = {
-    DATABASE_URL: Boolean(process.env["NEON_API_KEY"]),
+    DATABASE_URL: hasDatabase(),
     BETTER_AUTH_SECRET: Boolean(resolved),
     BETTER_AUTH_URL: Boolean(env("BETTER_AUTH_URL") ?? env("NEXT_PUBLIC_APP_URL")),
   };

@@ -6,6 +6,7 @@ const DICT = {
   en: { saveContact: "Save contact", verified: "verified", verifiedMember: "Official verified member", memberSince: "Member since" },
   nl: { saveContact: "Contact opslaan", verified: "geverifieerd", verifiedMember: "Officieel geverifieerd lid", memberSince: "Lid sinds" },
   fr: { saveContact: "Enregistrer le contact", verified: "vérifié", verifiedMember: "Membre officiellement vérifié", memberSince: "Membre depuis" },
+  de: { saveContact: "Kontakt speichern", verified: "verifiziert", verifiedMember: "Offiziell verifiziertes Mitglied", memberSince: "Mitglied seit" },
 } as const;
 
 export type ProfileTextKey = keyof (typeof DICT)["en"];

@@ -16,11 +16,30 @@
 import { APP_DOMAINS, normalizeHost, PRIMARY_DOMAIN } from "@/lib/app-domains";
 
 /** Hosts waarop we auth-callbacks vertrouwen. */
-const APPROVED_HOSTS: readonly string[] = [...APP_DOMAINS, "app.dlp.li", "maximilien.brussels"];
+const APPROVED_HOSTS: readonly string[] = [
+  ...APP_DOMAINS,
+  // Explicit: the bare apex (https://rout.be, no www) is a production host —
+  // isApprovedHost already matches it via APP_DOMAINS, but keep it on the list
+  // by name so the split deployment (rout.be public / rout.dlp.li admin)
+  // stays obvious when APP_DOMAINS changes.
+  "rout.be",
+  "www.rout.be",
+  "app.dlp.li",
+  "maximilien.brussels",
+  // Lovable preview/publish hosts: OAuth state cookies are set on the live
+  // host, so previews must be allowed to keep the callback on the same host.
+  "lovable.app",
+  "lovableproject.com",
+];
 
 const LOCAL_HOSTS: readonly string[] = ["localhost", "127.0.0.1", "0.0.0.0"];
 
-export const LOCAL_APP_URL = "http://localhost:3000";
+/** Local origin on the port the dev server actually listens on (sandbox: 8080). */
+function localAppUrl(): string {
+  const port = typeof process !== "undefined" ? process.env?.["PORT"]?.trim() : undefined;
+  return `http://localhost:${port && /^\d+$/.test(port) ? port : "8080"}`;
+}
+export const LOCAL_APP_URL = localAppUrl();
 export const FALLBACK_APP_URL = `https://${PRIMARY_DOMAIN}`;
 
 /** Het vaste pad van de Google-callback; identiek in dev en productie. */

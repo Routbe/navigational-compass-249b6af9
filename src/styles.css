@@ -852,6 +852,9 @@ select:focus-visible {
 .marquee-mask {
   mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
 }
+.marquee-edge {
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation: none; }
   .marquee-mask { overflow-x: auto; }

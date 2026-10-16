@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { BadgeCheck, Loader2 } from "lucide-react";
-import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { BrandIcon } from "@/components/integrations/BrandIcon";
@@ -15,10 +14,11 @@ import {
   type IntegrationFilter,
 } from "@/lib/integrations-catalog";
 import { normalizeIntegrationValue, type Audience } from "@/lib/integrations-rules";
-import { disconnectSpotifyPresence, setSpotifyPresenceScope, getMyPresence, setSpotifyPresenceVisible } from "@/lib/presence.functions";
+import { disconnectSpotifyPresence, setSpotifyPresenceScope, getMyPresence, setSpotifyPresenceVisible, testSpotifyPresence } from "@/lib/presence.functions";
 import { SnapchatPanel } from "@/components/studio/SnapchatPanel";
 import { getMyIntegrations, removeIntegration, saveIntegration } from "@/lib/integrations.functions";
 import { VerifyOwnership } from "@/components/studio/VerifyOwnership";
+import { OfficialVerifyButton, hasOfficialVerify } from "@/components/studio/OfficialVerifyButton";
 import { isBioVerifiable } from "@/lib/open-web-rules";
 
 const SPOTIFY_MESSAGES: Record<string, [ok: boolean, text: string]> = {
@@ -54,14 +54,21 @@ function AudiencePicker({ value, onChange, disabled }: { value: Audience; onChan
   );
 }
 
-/** 🔌 Verbindingen & Integraties — app-store raster voor live kaarten op het profiel. */
-export function IntegrationsAccordion() {
+/**
+ * 🔐 Integratiekluis (account-niveau): elke dienst wordt hier één keer gekoppeld en
+ * geverifieerd, en daarna hergebruikt op elk profiel en in elk component.
+ * `focus` toont meteen één dienst (vanuit de componentcatalogus).
+ */
+export function IntegrationVault({ focus }: { focus?: string } = {}) {
   const [filter, setFilter] = useState<IntegrationFilter>("popular");
+  const [focused, setFocused] = useState<string | undefined>(focus);
+  useEffect(() => setFocused(focus), [focus]);
   const qc = useQueryClient();
   const fetchPresence = useServerFn(getMyPresence);
   const setVisible = useServerFn(setSpotifyPresenceVisible);
   const disconnect = useServerFn(disconnectSpotifyPresence);
   const setScope = useServerFn(setSpotifyPresenceScope);
+  const testSpotify = useServerFn(testSpotifyPresence);
   const fetchMine = useServerFn(getMyIntegrations);
   const save = useServerFn(saveIntegration);
   const remove = useServerFn(removeIntegration);
@@ -88,6 +95,19 @@ export function IntegrationsAccordion() {
   }, []);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["my-integrations"] });
+
+  // Back from an official sign-in: a matching linked account marks the saved handle as verified (server re-checks).
+  useEffect(() => {
+    for (const [provider, row] of saved) {
+      const proven = sso[provider];
+      if (row.verified || !proven) continue;
+      if (proven.replace(/^@/, "").toLowerCase() !== row.handle.replace(/^@/, "").toLowerCase()) continue;
+      void save({ data: { provider, audience: row.audience, visible: row.visible, useSso: true } }).then((r) => {
+        if (r.ok) { toast.success("Geverifieerd via officiële login"); void refresh(); }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved, sso]);
 
   const persist = async (item: Integration, opts: { handle?: string; audience: Audience; visible: boolean; useSso?: boolean; showOnVerified?: boolean; showOnAlias?: boolean }) => {
     if (mine.data && !mine.data.ready) {
@@ -160,22 +180,15 @@ export function IntegrationsAccordion() {
   const connectedCount = (spotify ? 1 : 0) + saved.size;
 
   return (
-    <AccordionItem value="integrations" className="rounded-2xl border border-border bg-card px-4 sm:px-5">
-      <AccordionTrigger className="hover:no-underline">
-        <span className="flex min-w-0 flex-1 items-center justify-between gap-3 pr-2">
-          <span className="min-w-0 truncate text-left text-base font-medium">🔌 Verbindingen &amp; Integraties</span>
-          {connectedCount > 0 && (
-            <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-              {connectedCount} gekoppeld
-            </span>
-          )}
-        </span>
-      </AccordionTrigger>
-      <AccordionContent className="space-y-4 pb-5">
+    <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Koppel je diensten en toon live kaarten op je profiel. Kies per koppeling of ze op je Pro-, Social- of beide profielen verschijnt.
+          Koppel en verifieer een dienst één keer. Daarna gebruik je hem op elk profiel en in elk component, zonder opnieuw te verifiëren.
+          {connectedCount > 0 && <> · <strong>{connectedCount} gekoppeld</strong></>}
         </p>
-        <SnapchatPanel />
+        {!focused && <SnapchatPanel />}
+        {focused ? (
+          <button type="button" onClick={() => setFocused(undefined)} className="text-xs font-medium text-muted-foreground underline underline-offset-2">Toon alle diensten</button>
+        ) : (
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="tablist" aria-label="Categorie">
           {INTEGRATION_FILTERS.map((f) => (
             <button
@@ -193,9 +206,10 @@ export function IntegrationsAccordion() {
             </button>
           ))}
         </div>
+        )}
 
         <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
-          {filterIntegrations(filter).map((item) => {
+          {(focused ? filterIntegrations("all").filter((i) => i.id === focused) : filterIntegrations(filter)).map((item) => {
             const row = saved.get(item.id);
             const isSpotify = item.mode === "oauth";
             const connected = isSpotify ? Boolean(spotify) : Boolean(row);
@@ -266,6 +280,24 @@ export function IntegrationsAccordion() {
                         }
                       }}
                     />
+                    <button
+                      type="button"
+                      disabled={busy === item.id}
+                      onClick={async () => {
+                        setBusy(item.id);
+                        try {
+                          const r = await testSpotify();
+                          (r.ok ? toast.success : toast.error)(r.message, { duration: 10000 });
+                        } catch {
+                          toast.error("Test mislukt. Probeer opnieuw.");
+                        } finally {
+                          setBusy(null);
+                        }
+                      }}
+                      className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border text-xs font-medium hover:bg-muted"
+                    >
+                      Test verbinding
+                    </button>
                     <button type="button" onClick={() => void unlink(item)} disabled={busy === item.id} className="inline-flex h-8 w-full items-center justify-center rounded-lg border border-border text-xs font-medium hover:bg-muted">
                       Ontkoppelen
                     </button>
@@ -273,6 +305,9 @@ export function IntegrationsAccordion() {
                 ) : connected && row ? (
                   <div className="space-y-2">
                     <p className="truncate font-mono text-[11px] text-muted-foreground">Opgeslagen: {item.mode === "address" ? row.handle : `@${row.handle.replace(/^@/, "")}`}</p>
+                    {!row.verified && hasOfficialVerify(item.id) && (
+                      <OfficialVerifyButton provider={item.id} handle={row.handle} label={item.label} />
+                    )}
                     {!row.verified && isBioVerifiable(item.id) && (
                       <VerifyOwnership provider={item.id as "bluesky" | "wsocial" | "mastodon" | "github"} label={item.label} onVerified={() => void refresh()} />
                     )}
@@ -352,13 +387,12 @@ export function IntegrationsAccordion() {
             );
           })}
         </div>
-      </AccordionContent>
-    </AccordionItem>
+    </div>
   );
 }
 
 /** Independent per-profile visibility: Verified profile and/or Privacy Alias. */
-function ProfileScope({ label, verified, alias, disabled, onChange }: {
+export function ProfileScope({ label, verified, alias, disabled, onChange }: {
   label: string; verified: boolean; alias: boolean; disabled?: boolean;
   onChange: (v: { verified: boolean; alias: boolean }) => void;
 }) {

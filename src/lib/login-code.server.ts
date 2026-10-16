@@ -31,6 +31,10 @@ export async function issueLoginCode(email: string, link: string): Promise<strin
     await sql`delete from public.login_codes where email_hash = ${e} or expires_at < now()`;
     await sql`insert into public.login_codes (email_hash, code_hash, link, expires_at)
       values (${e}, ${await sha256Hex(`${e}:${code}`)}, ${link}, now() + make_interval(secs => ${LOGIN_CODE_TTL_SEC}))`;
+    // Dev/preview without Brevo: print the code so local sign-in still works. Never in production.
+    const noMail = !process.env["BREVO_API_KEY"]?.trim();
+    const isProd = process.env["VERCEL_ENV"] === "production" || process.env["NODE_ENV"] === "production";
+    if (noMail && !isProd) console.info(`[LOGIN CODE] ${norm(email)} → ${code} (dev fallback, Brevo not configured)`);
     return code;
   } catch (err) {
     console.error("[login-code] issue failed", (err as Error)?.message);

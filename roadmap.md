@@ -1,31 +1,8 @@
 # Roadmap
-- [x] A: typecheck + tests groen
-- [x] B: cleanup-assets cron (user_assets + shared_files, fail-safe) + schema docs
-- [x] C: Opera/Chromium storage + SVG ids
-- [x] D: Custom domain DNS stap
-- [x] E: Telegram webhook secret + setWebhook script
-- [x] F: Hybride identiteitsverificatie (db/81, server, UI)
-- [x] G: SMS gateway payload fix + Telegram /start
-- [x] H: Wachtwoord/2FA zonder wachtwoord via e-mailcode
-- [x] I: Account samenvoegen (handle/ontwerp kiezen, e-mailcode, alles samen)
-- [x] J: Opgeslagen kaartontwerpen
 
-## Open (uit specificaties)
-- [x] Mission Control: actieve leden, badges en actiepunten op /admin
-- [x] Financieel beheer: IBAN-overzicht en exacte naamsignalering op /admin/finance
-- [x] Infrastructuur: webhooklogboek, subdomeinen en aliassen op /admin/infra
-- [x] Nieuwe beheermodules: autorisatie, 30 gerichte tests en echte Neon-reads
-- [ ] Admin ingelogde eindcontrole (wacht op toegang tot een beheerderssessie; alleen uitgelogde redirects gecontroleerd)
-- [ ] Publieke Q&A en thema's (geparkeerd op verzoek; geen implementatie)
-- [x] Badges: wapenschilden (db/86), uploader/bewerken in /admin/custom-badges, interactieve pop-up op profiel
-- [ ] Snapchat Login Kit + Bitmoji-picker + handmatige status/mood-widget (geen Snap Map/GPS) (wacht op Snap Kit client ID/secret)
-- [x] Admin-portaal split (APP_MODE, rout.dlp.li, noindex) + harde build-split
-- [x] Leden 360° statusfilter server-side
-- [x] Sovereign Tip Jar (☕-knop + EPC-QR op profiel)
-- [ ] Testsuite account-merge / security-code / sms-provider / telegram
-- [x] Badge-uploads via Scaleway S3 (S3_* env vars) i.p.v. Vercel Blob
-- [x] Digitaal paspoort: grid en interactieve details afwerken
-- [x] Claim-a-Stamp: login-terugkeer, succesanimatie en veilige limieten (8 gerichte tests geslaagd)
-- [ ] Ingelogde claim en paspoort-pop-up end-to-end controleren (wacht op een testaccount en badge/claimlink; geen openbare profielen met stempels aanwezig)
-- [x] Publieke/admin shells + preview-schakelaar
-- [x] db/92 toegepast in Neon via migrate-gateway
+- [ ] Fix visuele/UI-problemen in "Live integratie toevoegen" pop-up (AddLiveIntegrationModal): verticale lijst, categoriebalk bovenaan (Aanbevolen / Alles / Games / …)
+- [ ] AddComponentModal: "Live Status & Feeds" niet meer als eerste bovenaan; keuzes onder elkaar in de pop-up met categoriebalk bovenaan
+- [ ] Totaal bereik verhuizen naar per-koppeling uitklapbare rij (zoals Live Integraties): verifiëren/ongedaan maken, verwijderen, bereik/volgers tonen met platform-specifieke naam (YouTube → abonnees); optie verbergen als platform geen data kan ophalen of echte koppeling vereist
+- [ ] QR, privacy & delen: automatische per-user preview-afbeelding (/api/public/og/<handle>.png) en preview-tekst tonen in ShareInspector; gebruiker kan overschrijven
+
+- [ ] Vertalingen: ~2000 vaste teksten in componenten/pagina's omzetten (scan: bun scripts/i18n-hardcoded.ts)

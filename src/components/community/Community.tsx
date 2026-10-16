@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { ShowcaseCard } from "@/lib/showcase.functions";
 import type { CommunityReview, CommunityStats } from "@/lib/community.functions";
 import { cn } from "@/lib/utils";
+import { DragMarquee } from "./DragMarquee";
 
 function Avatar({ c, size = "h-10 w-10" }: { c: ShowcaseCard; size?: string }) {
   return c.avatarUrl ? (
@@ -15,32 +16,27 @@ function Avatar({ c, size = "h-10 w-10" }: { c: ShowcaseCard; size?: string }) {
   );
 }
 
-/** Endless avatar strip moving left → right. One tap opens the profile. */
+/** Endless avatar strip moving right → left; pauses on hover, draggable. One tap opens the profile. */
 export function AvatarMarquee({ cards }: { cards: ShowcaseCard[] }) {
   if (!cards.length) return null;
-  // Repeat so the track is always wider than the screen, then double for a seamless loop.
   const base = Array.from({ length: Math.max(1, Math.ceil(12 / cards.length)) }, () => cards).flat();
-  const track = [...base, ...base];
   return (
-    <div className="marquee-mask relative overflow-hidden py-2">
-      <div className="marquee-track flex w-max gap-3">
-        {track.map((c, i) => (
-          <Link
-            key={`${c.handle}-${i}`}
-            to="/$username"
-            params={{ username: c.handle }}
-            preload="intent"
-            aria-hidden={i >= base.length || undefined}
-            tabIndex={i >= base.length ? -1 : undefined}
-            className="flex items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-4 transition-colors hover:border-foreground/40"
-          >
-            <Avatar c={c} size="h-8 w-8" />
-            <span className="font-mono text-xs text-foreground">@{c.handle}</span>
-            {c.verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-hidden />}
-          </Link>
-        ))}
-      </div>
-    </div>
+    <DragMarquee>
+      {base.map((c, i) => (
+        <Link
+          key={`${c.handle}-${i}`}
+          to="/$username"
+          params={{ username: c.handle }}
+          preload="intent"
+          draggable={false}
+          className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-1.5 pr-4 transition-colors hover:border-foreground/40"
+        >
+          <Avatar c={c} size="h-8 w-8" />
+          <span className="font-mono text-xs text-foreground">@{c.handle}</span>
+          {c.verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-hidden />}
+        </Link>
+      ))}
+    </DragMarquee>
   );
 }
 

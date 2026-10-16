@@ -81,5 +81,6 @@ const appModeMiddleware = createMiddleware().server(async ({ request, next }) =>
 // Sessions are carried by the httpOnly `rout_session` cookie (Neon), so no
 // client-side token attacher is needed on server functions.
 export const startInstance = createStart(() => ({
+  functionMiddleware: [],
   requestMiddleware: [errorMiddleware, appModeMiddleware, securityHeadersMiddleware, csrfMiddleware],
 }));

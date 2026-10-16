@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertCircle, BadgeCheck, Loader2, Pencil, ShieldCheck } from "lucide-react";
+import { AlertCircle, BadgeCheck, Loader2, Pencil, ShieldCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -143,12 +143,16 @@ export function UserHandleEditor({
         kind="verified"
         icon={
           verified ? (
-            <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-hidden />
+            <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-label="Geverifieerd" />
           ) : (
-            <BadgeCheck className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+            <UserX className="h-3.5 w-3.5 text-muted-foreground" aria-label="Niet geverifieerd" />
           )
         }
-        label={username ? `@${username}` : "— geen handle"}
+        label={
+          username
+            ? `@${username}${verified ? "" : " · niet geverifieerd"}`
+            : "— geen handle"
+        }
         url={`rout.be/${username ?? "…"}`}
         issue={rootIssue}
       />

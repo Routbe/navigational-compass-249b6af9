@@ -1,3 +1,4 @@
+import { isProfileSectionKind, PROFILE_SECTION_LABELS } from "@/lib/profile-section-blocks";
 import { GuestbookAccordion } from "@/components/studio/GuestbookAccordion";
 import { QuestionsInboxAccordion } from "@/components/studio/QuestionsInboxAccordion";
 import { QrCode } from "lucide-react";
@@ -128,8 +129,7 @@ import {
 } from "@/lib/alias-profile.functions";
 import { SubdomainPanel } from "@/components/dashboard/SubdomainPanel";
 import { BadgesPanel } from "@/components/dashboard/BadgesPanel";
-import { SocialVerifyPanel } from "@/components/dashboard/SocialVerifyPanel";
-import { TotalReachButton } from "@/components/dashboard/TotalReachModal";
+import { TotalReachToggle } from "@/components/studio/LiveIntegrations";
 import { BadgeActivityPanel } from "@/components/dashboard/BadgeActivityPanel";
 import { EmailForwardingPanel } from "@/components/dashboard/EmailForwardingPanel";
 import { EmailAliasDomains } from "@/components/dashboard/EmailAliasDomains";
@@ -138,7 +138,6 @@ import { oauthAvatarOf } from "@/lib/oauth-avatar";
 import { BlueskyWizard } from "@/components/dashboard/BlueskyWizard";
 import { LiveStatusAccordion } from "@/components/studio/LiveStatusAccordion";
 import { ShareMenu } from "@/components/profile/ShareMenu";
-import { IntegrationsAccordion } from "@/components/studio/IntegrationsAccordion";
 
 export type ProfileVariant = "verified" | "alias";
 
@@ -662,9 +661,17 @@ export function ProfileEditor({ variant = "verified" }: { variant?: ProfileVaria
   };
 
   const addBlock = (kind: string, value = "") => {
-    const def = BLOCK_KINDS.find((k) => k.kind === kind)!;
+    const label = isProfileSectionKind(kind) ? PROFILE_SECTION_LABELS[kind] : BLOCK_KINDS.find((k) => k.kind === kind)?.label;
+    if (!label) return;
+    const existing = isProfileSectionKind(kind) ? blocks.find((b) => b.kind === kind) : undefined;
+    if (existing) {
+      setBlocks((list) => list.map((b) => b.id === existing.id ? { ...b, hidden: false } : b));
+      setOpenBlock(existing.id);
+      return;
+    }
+    if (kind === "widget:badges") setPref("badgeShowcaseVisible", true);
     const id = newBlockId();
-    setBlocks((b) => [...b, { id, kind, label: def.label, value }]);
+    setBlocks((b) => [...b, { id, kind, label, value }]);
     setOpenBlock(id);
     setDrawer(false);
     // Search term and category are kept for next time.
@@ -940,8 +947,6 @@ export function ProfileEditor({ variant = "verified" }: { variant?: ProfileVaria
 
               <LiveStatusAccordion prefs={prefs} setPref={setPref} />
 
-              <IntegrationsAccordion />
-
               <QuestionsInboxAccordion />
 
               <GuestbookAccordion />
@@ -954,16 +959,28 @@ export function ProfileEditor({ variant = "verified" }: { variant?: ProfileVaria
                 onOpenAddDrawer={() => setDrawer(true)}
                 onQuickCreate={quickCreate}
                 onAddKind={(kind, value) => addBlock(kind, value)}
+                handle={normalized || handle}
+                onWidget={(id) => {
+                  if (id === "questions") {
+                    setPref("questionsEnabled", true);
+                    toast.success("Anonieme Vragenbox staat aan op je profiel");
+                  } else if (id === "badges") {
+                    setPref("badgeShowcaseVisible", true);
+                    toast.success("ROUT Badges staan aan op je profiel");
+                  } else if (id === "reach") {
+                    document.getElementById("studio-total-reach")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  } else {
+                    toast.info("Het Prikbord staat altijd op je profiel; beheer berichten bij Prikbord in de Studio");
+                  }
+                }}
               >
 
-                  <SocialVerifyPanel handle={normalized || handle} />
-
-                  <section className="space-y-3 rounded-2xl border border-border bg-card p-4 sm:p-5">
+                  <section id="studio-total-reach" className="space-y-3 rounded-2xl border border-border bg-card p-4 sm:p-5">
                     <h2 className="text-lg font-medium">Totaal bereik</h2>
                     <p className="text-sm text-muted-foreground">
                       Toon één badge met je totale volgersaantal over al je gekoppelde accounts.
                     </p>
-                    <TotalReachButton />
+                    <TotalReachToggle />
                   </section>
 
                 {/* 🏅 Badges: eigen map binnen Links & componenten, met schakelaar. */}
@@ -1062,6 +1079,7 @@ export function ProfileEditor({ variant = "verified" }: { variant?: ProfileVaria
                       onPrefChange={setPref}
                       displayName={displayName}
                       bio={tagline}
+                      handle={normalized || handle}
                     />
                   </section>
                 </AccordionContent>

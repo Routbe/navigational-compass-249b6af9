@@ -1,3 +1,4 @@
+import { reasonFromStatus, type SpotifyReason } from "./spotify-status-rules";
 /**
  * Spotify Live Presence (server-only).
  *
@@ -78,6 +79,8 @@ export function spotifyAuthorizeUrl(userId: string, origin?: Request | string): 
     scope: SCOPES,
     redirect_uri: spotifyRedirectUri(origin),
     state: signSpotifyState(userId),
+    // Always show the consent screen so a silent browser session can't skip the grant.
+    show_dialog: "true",
   });
   return `https://accounts.spotify.com/authorize?${p}`;
 }
@@ -130,11 +133,11 @@ export async function exchangeSpotifyCode(userId: string, code: string, origin?:
   await store(userId, t, name);
 }
 
-async function accessToken(userId: string): Promise<string | null> {
+async function accessToken(userId: string, forceRefresh = false): Promise<string | null> {
   const rows = await sql`select * from public.user_presence_connections where user_id = ${userId} and provider = 'spotify'`;
   const row = rows[0] as Record<string, string> | undefined;
   if (!row) return null;
-  if (new Date(row["expires_at"]!).getTime() > Date.now()) {
+  if (!forceRefresh && new Date(row["expires_at"]!).getTime() > Date.now()) {
     return open(row["access_token_enc"]!, row["access_token_iv"]!, aad(userId, "access"));
   }
   if (!row["refresh_token_enc"]) return null;
@@ -153,6 +156,8 @@ export type NowPlaying = {
   url?: string | null;
   progressMs?: number;
   durationMs?: number;
+  /** Why nothing is shown (diagnostics only, never tokens). */
+  reason?: SpotifyReason;
   /** Server time (ms) at which progressMs was measured. */
   syncedAt?: number;
 };
@@ -188,30 +193,56 @@ export async function cachedNowPlaying(userId: string): Promise<NowPlaying> {
       artist_name = excluded.artist_name, album_art_url = excluded.album_art_url, external_url = excluded.external_url,
       progress_ms = excluded.progress_ms, duration_ms = excluded.duration_ms,
       sync_timestamp = excluded.sync_timestamp, updated_at = now()`.catch((e) => console.error("[music-cache]", e));
-  return { ...live, syncedAt };
+  const { reason: _r, ...pub } = live;
+  return { ...pub, syncedAt };
 }
 
 /** Only public track info; never tokens or account details. */
 export async function nowPlaying(userId: string): Promise<NowPlaying> {
-  const token = await accessToken(userId);
-  if (!token) return { playing: false };
-  const res = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (res.status === 204 || !res.ok) return { playing: false };
+  let token = await accessToken(userId);
+  if (!token) return { playing: false, reason: "not_connected" };
+  const call = (t: string) =>
+    fetch("https://api.spotify.com/v1/me/player/currently-playing?additional_types=episode", {
+      headers: { Authorization: `Bearer ${t}` },
+    });
+  let res = await call(token);
+  if (res.status === 401) {
+    token = await accessToken(userId, true).catch(() => null);
+    if (token) res = await call(token);
+  }
+  const bad = reasonFromStatus(res.status);
+  if (bad) {
+    if (bad !== "no_content") {
+      const body = await res.text().catch(() => "");
+      const clientIdPrefix = (process.env["SPOTIFY_CLIENT_ID"] ?? "").slice(0, 5);
+      console.error("[Spotify API Error]:", res.status, body, `client_id=${clientIdPrefix}...`);
+    }
+    return { playing: false, reason: bad };
+  }
   const j = (await res.json()) as {
     is_playing?: boolean;
     progress_ms?: number;
     currently_playing_type?: string;
-    item?: { name: string; artists?: { name: string }[]; album?: { name: string; images?: { url: string }[] }; external_urls?: { spotify?: string }; duration_ms?: number };
+    item?: {
+      name: string;
+      artists?: { name: string }[];
+      album?: { name: string; images?: { url: string }[] };
+      show?: { name: string; images?: { url: string }[] };
+      images?: { url: string }[];
+      external_urls?: { spotify?: string };
+      duration_ms?: number;
+    };
   };
-  if (!j.is_playing || !j.item) return { playing: false };
+  if (!j.item) return { playing: false, reason: j.is_playing ? "unsupported_type" : "not_playing" };
+  if (!j.is_playing) return { playing: false, reason: "not_playing" };
+  const ep = j.currently_playing_type === "episode";
   return {
     playing: true,
+    reason: "playing",
     title: j.item.name,
-    artist: (j.item.artists ?? []).map((a) => a.name).join(", "),
-    album: j.item.album?.name,
-    image: j.item.album?.images?.[0]?.url ?? null,
+    artist: ep ? j.item.show?.name ?? "Podcast" : (j.item.artists ?? []).map((a) => a.name).join(", "),
+    album: ep ? j.item.show?.name : j.item.album?.name,
+    image: (ep ? j.item.images?.[0]?.url ?? j.item.show?.images?.[0]?.url : j.item.album?.images?.[0]?.url) ?? null,
     url: j.item.external_urls?.spotify ?? null,
     progressMs: j.progress_ms ?? 0,
     durationMs: j.item.duration_ms ?? 0,
@@ -242,9 +273,11 @@ export async function setSpotifyScope(userId: string, scope: { verified: boolean
     where user_id = ${userId} and provider = 'spotify'`;
 }
 
+/** Hard unlink: removes every Spotify row (tokens, status, integration) for the user. */
 export async function disconnectSpotify(userId: string) {
   await sql`delete from public.user_music_status where user_id = ${userId}`;
   await sql`delete from public.user_presence_connections where user_id = ${userId} and provider = 'spotify'`;
+  await sql`delete from public.user_integrations where user_id = ${userId} and provider = 'spotify'`;
 }
 
 /** Public lookup: the owner of a handle, only when they opted in and the profile is public. */
@@ -255,7 +288,7 @@ export async function publicSpotifyOwner(handle: string): Promise<string | null>
     left join public.alias_profiles a on a.user_id = c.user_id
     where c.provider = 'spotify' and c.show_on_profile = true
       and (lower(p.username) = lower(${handle}) or lower(a.handle) = lower(${handle}))
-      and coalesce((coalesce(a.display_prefs, p.display_prefs) ->> 'publicProfile')::boolean, true)
+      and coalesce(((case when lower(a.handle) = lower(${handle}) then a.display_prefs else p.display_prefs end) ->> 'publicProfile')::boolean, true)
       and case when lower(a.handle) = lower(${handle}) then c.show_on_alias else c.show_on_verified end
     limit 1`;
   return (rows[0]?.["user_id"] as string | undefined) ?? null;
